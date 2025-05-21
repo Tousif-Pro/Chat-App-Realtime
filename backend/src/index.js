@@ -7,7 +7,6 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
 import connectDB from './lib/db.js';
-
 import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
 import { app, server } from "./lib/socket.js";
@@ -17,10 +16,12 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const PORT = process.env.PORT || 5002;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+const PORT = process.env.PORT || 5003; // Changed to 5003 as suggested
+
+// Remove this line - we only need server.listen, not both
+// app.listen(PORT, () => {
+//   console.log(`Server is running on port ${PORT}`);
+// });
 
 console.log("Starting the server...");
 
@@ -44,10 +45,23 @@ if (process.env.NODE_ENV === "production") {
   });
 }
 
-server.listen(PORT, () => {
-  console.log("server is running on PORT:" + PORT);
-  connectDB();
-});
+// Implement port flexibility to handle EADDRINUSE errors
+const startServer = (port) => {
+  server.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+    connectDB();
+  }).on('error', (error) => {
+    if (error.code === 'EADDRINUSE') {
+      console.log(`Port ${port} is busy, trying ${port + 1}...`);
+      startServer(port + 1);
+    } else {
+      console.error('Server error:', error);
+    }
+  });
+};
+
+// Start server with port flexibility
+startServer(PORT);
 
 export const someFunction = () => {
   // Your code here
