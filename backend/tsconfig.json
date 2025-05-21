@@ -1,13 +1,18 @@
+
 {
   "compilerOptions": {
-    "target": "es6",
-    "module": "esnext",               // <-- change this
+    "target": "es2020",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": ".",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "allowJs": true,       // Add this to process JavaScript files
+    "checkJs": false       // Add this to avoid type checking JavaScript files
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*.js", "*.js"],
+  "exclude": ["node_modules", "dist"]
 }

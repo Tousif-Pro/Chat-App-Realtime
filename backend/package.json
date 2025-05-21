@@ -3,11 +3,14 @@
   "version": "1.0.0",
   "description": "",
   "main": "src/index.js",
-
-"scripts": {
-  "build": "babel src --out-dir dist",
-  "start": "node dist/index.js"
-},
+  "scripts": {
+    "build": "mkdir -p dist && cp -r src/* dist/",
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
   "keywords": [],
   "author": "",
   "type": "module",
@@ -24,7 +27,6 @@
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.7",
-    "typescript": "^5.8.3"
+    "nodemon": "^3.1.7"
   }
 }
