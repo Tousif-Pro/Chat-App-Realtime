@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { axiosInstance } from "../lib/axios.js";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
+import axios from 'axios';
 
 const BASE_URL = import.meta.env.MODE === "development" ? "http://localhost:5002" : "/";
 
@@ -45,13 +46,12 @@ export const useAuthStore = create((set, get) => ({
   login: async (data) => {
     set({ isLoggingIn: true });
     try {
-      const res = await axiosInstance.post("/auth/login", data);
+      const res = await axiosInstance.post(`${BASE_URL}/auth/login`, data);
       set({ authUser: res.data });
       toast.success("Logged in successfully");
-
       get().connectSocket();
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || "Login failed");
     } finally {
       set({ isLoggingIn: false });
     }
@@ -102,4 +102,28 @@ export const useAuthStore = create((set, get) => ({
   disconnectSocket: () => {
     if (get().socket?.connected) get().socket.disconnect();
   },
+
+  loginUser: async (credentials) => {
+    set({ isLoggingIn: true });
+    try {
+      const response = await axiosInstance.post("/auth/login", credentials);
+      set({ authUser: response.data });
+      toast.success("Logged in successfully");
+      get().connectSocket();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Login failed");
+    } finally {
+      set({ isLoggingIn: false });
+    }
+  },
 }));
+
+// const loginUser = async (credentials) => {
+//   try {
+//     const response = await axios.post('/auth/login', credentials);
+//     // Handle successful login
+//   } catch (error) {
+//     console.error('Login failed:', error);
+//     // Handle error
+//   }
+// };
