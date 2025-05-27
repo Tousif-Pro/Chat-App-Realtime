@@ -32,8 +32,7 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    // allow requests with no origin (like mobile apps, curl, Postman)
-    if (!origin) return callback(null, true);
+    if (!origin) return callback(null, true); // allow non-browser requests
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     } else {
@@ -52,23 +51,37 @@ if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../frontend/dist")));
 
   app.get("*", (req, res) => {
-    res.sendFile(path.join(__dirname, "../frontend", "dist", "index.html"));
+    res.sendFile(path.join(__dirname, "../frontend/dist/index.html"));
   });
 }
 
-// Start Server
-const startServer = (port) => {
-  server.listen(port, () => {
-    console.log(`✅ Server is running on port ${port}`);
-    connectDB();
-  }).on('error', (error) => {
-    if (error.code === 'EADDRINUSE') {
-      console.warn(`⚠️ Port ${port} is in use, trying ${port + 1}...`);
-      startServer(port + 1);
-    } else {
-      console.error('❌ Server error:', error);
-    }
-  });
+// Connect to DB first, then start server
+const startServer = async (port) => {
+  try {
+    await connectDB();
+    server.listen(port, () => {
+      console.log(`✅ Server is running on port ${port}`);
+    }).on('error', (error) => {
+      if (error.code === 'EADDRINUSE') {
+        console.warn(`⚠️ Port ${port} is in use, trying ${port + 1}...`);
+        startServer(port + 1);
+      } else {
+        console.error('❌ Server error:', error);
+      }
+    });
+  } catch (err) {
+    console.error("Failed to connect to database", err);
+    process.exit(1); // exit if DB connection fails
+  }
 };
 
 startServer(PORT);
+
+// Optional: Error handler middleware (for CORS and others)
+app.use((err, req, res, next) => {
+  if (err.message === "Not allowed by CORS") {
+    return res.status(403).json({ error: err.message });
+  }
+  console.error(err);
+  res.status(500).json({ error: "Internal Server Error" });
+});
