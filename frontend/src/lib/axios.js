@@ -1,3 +1,4 @@
+// src/lib/axios.js
 import axios from 'axios';
 
 // Determine the correct base URL based on environment
@@ -5,7 +6,7 @@ const getBaseURL = () => {
   if (import.meta.env.MODE === 'development') {
     return 'http://localhost:5002/api';  // localhost with /api
   }
-  return import.meta.env.VITE_API_URL || 'https://chat-app-realtime-2.onrender.com/api'; // note the /api here
+  return import.meta.env.VITE_API_URL || 'https://chat-app-realtime-2.onrender.com/api/auth'; // Ensure /api is included
 };
 
 export const axiosInstance = axios.create({
@@ -17,7 +18,7 @@ export const axiosInstance = axios.create({
 // Add request interceptor for debugging
 axiosInstance.interceptors.request.use(
   (config) => {
-    console.log('Making request to:', config.baseURL + config.url);
+    console.log('Making request to:', config.baseURL + config.url); // This will show the full URL
     return config;
   },
   (error) => {
@@ -37,5 +38,3 @@ axiosInstance.interceptors.response.use(
 );
 
 console.log("Current Base URL:", getBaseURL());
-
-// Remove the fetchUsers function from here - it should be in a separate service file
