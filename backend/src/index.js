@@ -16,23 +16,21 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const PORT = process.env.PORT || 5003; // Changed to 5003 as suggested
-
-// Remove this line - we only need server.listen, not both
-// app.listen(PORT, () => {
-//   console.log(`Server is running on port ${PORT}`);
-// });
+const PORT = process.env.PORT || 5003;
 
 console.log("Starting the server...");
 
 app.use(express.json());
 app.use(cookieParser());
+
+// Correct CORS setup
 app.use(cors({
   origin: [
-    "http://localhost:5173", // for local dev
-    "https://chat-app-frontend-chi-eight.vercel.app" // for Vercel deployed frontend
+    "http://localhost:5173",  // local dev
+    "https://chat-app-frontend-lnmseem2f-tests-projects-4d1794d2.vercel.app",
+    "https://chat-app-frontend-chi-eight.vercel.app"
   ],
-  credentials: true,
+  credentials: true, // Allow credentials (cookies, authorization headers, etc.)
 }));
 
 app.use("/api/auth", authRoutes);
@@ -46,7 +44,6 @@ if (process.env.NODE_ENV === "production") {
   });
 }
 
-// Implement port flexibility to handle EADDRINUSE errors
 const startServer = (port) => {
   server.listen(port, () => {
     console.log(`Server is running on port ${port}`);
@@ -61,7 +58,6 @@ const startServer = (port) => {
   });
 };
 
-// Start server with port flexibility
 startServer(PORT);
 
 export const someFunction = () => {
