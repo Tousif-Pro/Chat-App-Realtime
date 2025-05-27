@@ -8,7 +8,7 @@ const getBaseURL = () => {
   }
   
   // For production, use the environment variable or fallback to your Render backend
-  return import.meta.env.VITE_API_URL || 'https://chat-app-realtime-2.onrender.com/api';
+  return import.meta.env.VITE_API_URL || 'https://chat-app-realtime-2.onrender.com';
 };
 
 export const axiosInstance = axios.create({
