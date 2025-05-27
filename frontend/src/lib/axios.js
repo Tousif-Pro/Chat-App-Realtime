@@ -1,12 +1,21 @@
 import axios from 'axios';
 
-// Use your working base URL
-const BASE_URL = 'https://chat-app-realtime-2.onrender.com/api';
+const getBaseURL = () => {
+  if (import.meta.env.MODE === 'development') {
+    return 'http://localhost:5002/api'; // local with /api
+  }
+  // ensure /api is appended even if VITE_API_URL doesn't have it
+  let prodUrl = import.meta.env.VITE_API_URL || 'https://chat-app-realtime-2.onrender.com';
+  if (!prodUrl.endsWith('/api')) {
+    prodUrl += '/api';
+  }
+  return prodUrl;
+};
 
 export const axiosInstance = axios.create({
-  baseURL: BASE_URL,
+  baseURL: getBaseURL(),
   withCredentials: true,
-  timeout: 10000,
+  timeout: 10000, // 10 seconds timeout
 });
 
 // Request interceptor
