@@ -1,10 +1,12 @@
 import { create } from "zustand";
-import { axiosInstance } from "../lib/axios.js";
+import { axiosInstance } from "../lib/axios.js"; // your pre-configured axios instance
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
-import axios from 'axios';
 
-const BASE_URL = import.meta.env.MODE === "development" ? "http://localhost:5002" : "/";
+// Use full backend URL depending on env: dev or prod
+const BASE_URL = import.meta.env.MODE === "development" 
+  ? "http://localhost:5002" 
+  : "https://chat-app-realtime-2.onrender.com"; // Your Render backend URL
 
 export const useAuthStore = create((set, get) => ({
   authUser: null,
@@ -18,7 +20,6 @@ export const useAuthStore = create((set, get) => ({
   checkAuth: async () => {
     try {
       const res = await axiosInstance.get(`${BASE_URL}/auth/check`);
-
       set({ authUser: res.data });
       get().connectSocket();
     } catch (error) {
@@ -32,12 +33,13 @@ export const useAuthStore = create((set, get) => ({
   signup: async (data) => {
     set({ isSigningUp: true });
     try {
-      const res = await axiosInstance.post("/auth/signup", data);
+      const res = await axiosInstance.post(`${BASE_URL}/auth/signup`, data);
       set({ authUser: res.data });
       toast.success("Account created successfully");
       get().connectSocket();
     } catch (error) {
-      toast.error(error.response.data.message);
+      const msg = error.response?.data?.message || "Signup failed";
+      toast.error(msg);
     } finally {
       set({ isSigningUp: false });
     }
@@ -51,7 +53,8 @@ export const useAuthStore = create((set, get) => ({
       toast.success("Logged in successfully");
       get().connectSocket();
     } catch (error) {
-      toast.error(error.response?.data?.message || "Login failed");
+      const msg = error.response?.data?.message || "Login failed";
+      toast.error(msg);
     } finally {
       set({ isLoggingIn: false });
     }
@@ -59,71 +62,47 @@ export const useAuthStore = create((set, get) => ({
 
   logout: async () => {
     try {
-      await axiosInstance.post("/auth/logout");
+      await axiosInstance.post(`${BASE_URL}/auth/logout`);
       set({ authUser: null });
       toast.success("Logged out successfully");
       get().disconnectSocket();
     } catch (error) {
-      toast.error(error.response.data.message);
+      const msg = error.response?.data?.message || "Logout failed";
+      toast.error(msg);
     }
   },
 
   updateProfile: async (data) => {
     set({ isUpdatingProfile: true });
     try {
-      const res = await axiosInstance.put("/auth/update-profile", data);
+      const res = await axiosInstance.put(`${BASE_URL}/auth/update-profile`, data);
       set({ authUser: res.data });
       toast.success("Profile updated successfully");
     } catch (error) {
-      console.log("error in update profile:", error);
-      toast.error(error.response.data.message);
+      const msg = error.response?.data?.message || "Update failed";
+      toast.error(msg);
     } finally {
       set({ isUpdatingProfile: false });
     }
   },
 
   connectSocket: () => {
-    const { authUser } = get();
-    if (!authUser || get().socket?.connected) return;
+    const { authUser, socket } = get();
+    if (!authUser || socket?.connected) return;
 
-    const socket = io(BASE_URL, {
-      query: {
-        userId: authUser._id,
-      },
+    const socketConnection = io(BASE_URL, {
+      query: { userId: authUser._id },
     });
-    socket.connect();
+    socketConnection.connect();
 
-    set({ socket: socket });
+    set({ socket: socketConnection });
 
-    socket.on("getOnlineUsers", (userIds) => {
+    socketConnection.on("getOnlineUsers", (userIds) => {
       set({ onlineUsers: userIds });
     });
   },
+
   disconnectSocket: () => {
     if (get().socket?.connected) get().socket.disconnect();
   },
-
-  loginUser: async (credentials) => {
-    set({ isLoggingIn: true });
-    try {
-      const response = await axiosInstance.post("/auth/login", credentials);
-      set({ authUser: response.data });
-      toast.success("Logged in successfully");
-      get().connectSocket();
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Login failed");
-    } finally {
-      set({ isLoggingIn: false });
-    }
-  },
 }));
-
-// const loginUser = async (credentials) => {
-//   try {
-//     const response = await axios.post('/auth/login', credentials);
-//     // Handle successful login
-//   } catch (error) {
-//     console.error('Login failed:', error);
-//     // Handle error
-//   }
-// };
