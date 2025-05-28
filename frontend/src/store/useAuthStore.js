@@ -1,26 +1,27 @@
+// src/store/auth.js
 import { create } from 'zustand';
 import { axiosInstance } from '../lib/axios';
 import toast from 'react-hot-toast';
 import { io } from 'socket.io-client';
 
-// Socket base URL
-const SOCKET_URL = 'https://chat-app-realtime-2.onrender.com/api';
+const SOCKET_URL = 'https://chat-app-realtime-2.onrender.com';
 
 export const useAuthStore = create((set, get) => ({
   authUser: null,
   isSigningUp: false,
   isLoggingIn: false,
   socket: null,
+  onlineUsers: [],
 
   signup: async (data) => {
     set({ isSigningUp: true });
     try {
-      const res = await axiosInstance.post('/api/auth/signup', data);
+      const res = await axiosInstance.post('/auth/signup', data);
       set({ authUser: res.data });
       toast.success('Account created successfully');
       get().connectSocket();
     } catch (error) {
-      const msg = error.response?.data?.message || 'Signup failed';
+      const msg = error?.response?.data?.message || 'Signup failed';
       toast.error(msg);
     } finally {
       set({ isSigningUp: false });
@@ -30,12 +31,12 @@ export const useAuthStore = create((set, get) => ({
   login: async (data) => {
     set({ isLoggingIn: true });
     try {
-      const res = await axiosInstance.post('/api/auth/login', data);
+      const res = await axiosInstance.post('/auth/login', data);
       set({ authUser: res.data });
       toast.success('Logged in successfully');
       get().connectSocket();
     } catch (error) {
-      const msg = error.response?.data?.message || 'Login failed';
+      const msg = error?.response?.data?.message || 'Login failed';
       toast.error(msg);
     } finally {
       set({ isLoggingIn: false });
@@ -61,6 +62,15 @@ export const useAuthStore = create((set, get) => ({
   },
 
   disconnectSocket: () => {
-    if (get().socket?.connected) get().socket.disconnect();
+    if (get().socket?.connected) {
+      get().socket.disconnect();
+      set({ socket: null });
+    }
+  },
+
+  // ✅ Add checkAuth function
+  checkAuth: () => {
+    const { authUser } = get();
+    return !!authUser;
   },
 }));

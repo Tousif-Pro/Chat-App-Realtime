@@ -10,11 +10,12 @@ const LoginPage = () => {
     email: "",
     password: "",
   });
-  const { login, isLoggingIn, loginUser } = useAuthStore();
+
+  const { login, isLoggingIn } = useAuthStore(); // ✅ Correctly using Zustand store
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    loginUser(formData);
+    login(formData); // ✅ Corrected: was loginUser(formData)
   };
 
   return (
@@ -25,10 +26,7 @@ const LoginPage = () => {
           {/* Logo */}
           <div className="text-center mb-8">
             <div className="flex flex-col items-center gap-2 group">
-              <div
-                className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20
-              transition-colors"
-              >
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
                 <MessageSquare className="w-6 h-6 text-primary" />
               </div>
               <h1 className="text-2xl font-bold mt-2">Welcome Back</h1>
@@ -48,7 +46,7 @@ const LoginPage = () => {
                 </div>
                 <input
                   type="email"
-                  className={`input input-bordered w-full pl-10`}
+                  className="input input-bordered w-full pl-10"
                   placeholder="you@example.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -66,7 +64,7 @@ const LoginPage = () => {
                 </div>
                 <input
                   type={showPassword ? "text" : "password"}
-                  className={`input input-bordered w-full pl-10`}
+                  className="input input-bordered w-full pl-10"
                   placeholder="••••••••"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -116,4 +114,5 @@ const LoginPage = () => {
     </div>
   );
 };
+
 export default LoginPage;
