@@ -15,7 +15,8 @@ export const useChatStore = create((set, get) => ({
     set({ isUsersLoading: true });
     try {
       console.log('🔍 Fetching users...');
-      const res = await axiosInstance.get("https://chat-app-realtime-2.onrender.com/api/messages/users");
+      // Remove the full URL since axiosInstance already has baseURL
+      const res = await axiosInstance.get("/messages/users");
       console.log('✅ Users fetched successfully:', res.data);
       set({ users: res.data });
     } catch (error) {
@@ -23,14 +24,19 @@ export const useChatStore = create((set, get) => ({
       
       // Better error handling
       const errorMessage = error.response?.data?.message || 
-                          error.message || 
-                          'Failed to fetch users';
+                           error.message || 
+                           'Failed to fetch users';
       
       toast.error(errorMessage);
       
-      // If it's a 401 error, clear users
+      // If it's a 401 error, might need to redirect to login
       if (error.response?.status === 401) {
         set({ users: [] });
+        // Optionally redirect to login or refresh auth
+        const authStore = useAuthStore.getState();
+        if (authStore.logout) {
+          authStore.logout();
+        }
       }
     } finally {
       set({ isUsersLoading: false });
@@ -48,8 +54,8 @@ export const useChatStore = create((set, get) => ({
       console.error('❌ Error fetching messages:', error);
       
       const errorMessage = error.response?.data?.message || 
-                          error.message || 
-                          'Failed to fetch messages';
+                           error.message || 
+                           'Failed to fetch messages';
       
       toast.error(errorMessage);
     } finally {
@@ -68,8 +74,8 @@ export const useChatStore = create((set, get) => ({
       console.error('❌ Error sending message:', error);
       
       const errorMessage = error.response?.data?.message || 
-                          error.message || 
-                          'Failed to send message';
+                           error.message || 
+                           'Failed to send message';
       
       toast.error(errorMessage);
     }
