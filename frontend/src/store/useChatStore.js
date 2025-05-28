@@ -1,4 +1,4 @@
-// store/useChatStore.js - Fixed version
+// store/useChatStore.js
 import { create } from "zustand";
 import toast from "react-hot-toast";
 import { axiosInstance } from "../lib/axios";
@@ -14,30 +14,23 @@ export const useChatStore = create((set, get) => ({
   getUsers: async () => {
     set({ isUsersLoading: true });
     try {
-      console.log('🔍 Fetching users...');
-      // Remove the full URL since axiosInstance already has baseURL
+      console.log('🔍 Fetching users for sidebar...');
       const res = await axiosInstance.get("/messages/users");
-      console.log('✅ Users fetched successfully:', res.data);
+      
+      console.log('✅ Users fetched successfully:', res.data.length, 'users');
       set({ users: res.data });
+      
     } catch (error) {
       console.error('❌ Error fetching users:', error);
       
-      // Better error handling
-      const errorMessage = error.response?.data?.message || 
-                           error.message || 
-                           'Failed to fetch users';
+      const errorMessage = error.response?.data?.error || 
+                         error.response?.data?.message || 
+                         error.message || 
+                         'Failed to fetch users';
       
       toast.error(errorMessage);
+      set({ users: [] });
       
-      // If it's a 401 error, might need to redirect to login
-      if (error.response?.status === 401) {
-        set({ users: [] });
-        // Optionally redirect to login or refresh auth
-        const authStore = useAuthStore.getState();
-        if (authStore.logout) {
-          authStore.logout();
-        }
-      }
     } finally {
       set({ isUsersLoading: false });
     }
@@ -48,16 +41,20 @@ export const useChatStore = create((set, get) => ({
     try {
       console.log('💬 Fetching messages for user:', userId);
       const res = await axiosInstance.get(`/messages/${userId}`);
-      console.log('✅ Messages fetched successfully:', res.data);
+      
+      console.log('✅ Messages fetched:', res.data.length, 'messages');
       set({ messages: res.data });
+      
     } catch (error) {
       console.error('❌ Error fetching messages:', error);
       
-      const errorMessage = error.response?.data?.message || 
-                           error.message || 
-                           'Failed to fetch messages';
+      const errorMessage = error.response?.data?.error || 
+                         error.response?.data?.message || 
+                         'Failed to fetch messages';
       
       toast.error(errorMessage);
+      set({ messages: [] });
+      
     } finally {
       set({ isMessagesLoading: false });
     }
@@ -65,17 +62,25 @@ export const useChatStore = create((set, get) => ({
 
   sendMessage: async (messageData) => {
     const { selectedUser, messages } = get();
+    
+    if (!selectedUser) {
+      toast.error("No user selected");
+      return;
+    }
+
     try {
-      console.log('📤 Sending message:', messageData);
+      console.log('📤 Sending message to:', selectedUser.fullName);
       const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, messageData);
-      console.log('✅ Message sent successfully:', res.data);
+      
+      console.log('✅ Message sent successfully');
       set({ messages: [...messages, res.data] });
+      
     } catch (error) {
       console.error('❌ Error sending message:', error);
       
-      const errorMessage = error.response?.data?.message || 
-                           error.message || 
-                           'Failed to send message';
+      const errorMessage = error.response?.data?.error || 
+                         error.response?.data?.message || 
+                         'Failed to send message';
       
       toast.error(errorMessage);
     }
@@ -86,11 +91,15 @@ export const useChatStore = create((set, get) => ({
     if (!selectedUser) return;
 
     const socket = useAuthStore.getState().socket;
+    if (!socket) return;
+
+    console.log('🔔 Subscribing to messages for:', selectedUser.fullName);
 
     socket.on("newMessage", (newMessage) => {
       const isMessageSentFromSelectedUser = newMessage.senderId === selectedUser._id;
       if (!isMessageSentFromSelectedUser) return;
 
+      console.log('📨 New message received:', newMessage);
       set({
         messages: [...get().messages, newMessage],
       });
@@ -99,8 +108,25 @@ export const useChatStore = create((set, get) => ({
 
   unsubscribeFromMessages: () => {
     const socket = useAuthStore.getState().socket;
-    socket.off("newMessage");
+    if (socket) {
+      console.log('🔕 Unsubscribing from messages');
+      socket.off("newMessage");
+    }
   },
 
-  setSelectedUser: (selectedUser) => set({ selectedUser }),
+  setSelectedUser: (selectedUser) => {
+    console.log('👤 Selected user:', selectedUser?.fullName);
+    set({ selectedUser });
+  },
+
+  // Clear all data (useful for logout)
+  clearChatData: () => {
+    set({
+      messages: [],
+      users: [],
+      selectedUser: null,
+      isUsersLoading: false,
+      isMessagesLoading: false,
+    });
+  },
 }));
