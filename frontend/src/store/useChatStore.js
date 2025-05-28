@@ -15,7 +15,7 @@ export const useChatStore = create((set, get) => ({
     set({ isUsersLoading: true });
     try {
       console.log('🔍 Fetching users...');
-      const res = await axiosInstance.get("/messages/users");
+      const res = await axiosInstance.get("https://chat-app-realtime-2.onrender.com/api/messages/users");
       console.log('✅ Users fetched successfully:', res.data);
       set({ users: res.data });
     } catch (error) {
