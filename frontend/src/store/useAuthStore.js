@@ -7,7 +7,6 @@ import { io } from "socket.io-client";
 const BASE_URL = import.meta.env.MODE === "development" 
   ? "http://localhost:5003" 
   : "https://chat-app-realtime-2.onrender.com";
-
 export const useAuthStore = create((set, get) => ({
   authUser: null,
   isSigningUp: false,
@@ -20,38 +19,40 @@ export const useAuthStore = create((set, get) => ({
   checkAuth: async () => {
     try {
       console.log("🔍 Checking authentication status...");
+      console.log("🍪 Current cookies:", document.cookie);
+      
       const res = await axiosInstance.get("/auth/check");
       
       console.log("✅ Auth check successful:", res.data.email);
-      set({ authUser: res.data });
+      set({ authUser: res.data, isCheckingAuth: false });
       get().connectSocket();
-    } catch (error) {
-      console.log("❌ Auth check failed:", error.response?.data?.error);
-      set({ authUser: null });
-    } finally {
-      set({ isCheckingAuth: false });
-    }
-  },
-
-  signup: async (data) => {
-    set({ isSigningUp: true });
-    try {
-      console.log("👤 Signing up user:", data.email);
-      const res = await axiosInstance.post("/auth/signup", data);
       
-      console.log("✅ Signup successful");
-      set({ authUser: res.data });
-      toast.success("Account created successfully");
-      get().connectSocket();
     } catch (error) {
-      const errorMessage = error.response?.data?.error || "Signup failed";
-      console.error("❌ Signup error:", errorMessage);
-      toast.error(errorMessage);
-    } finally {
-      set({ isSigningUp: false });
+      console.log("❌ Auth check failed:", error.response?.status, error.response?.data);
+      
+      // Clear auth state completely
+      set({ 
+        authUser: null, 
+        isCheckingAuth: false 
+      });
+      
+      // Clear any stored auth data
+      localStorage.removeItem('auth-storage');
+      
+      // Disconnect socket
+      get().disconnectSocket();
+      
+      // Redirect to login
+      if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/signup')) {
+        console.log("🔄 Redirecting to login...");
+        window.location.href = '/login';
+      }
     }
   },
 
+  // Rest of your store methods...
+  // Make sure login/signup set cookies properly
+  
   login: async (data) => {
     set({ isLoggingIn: true });
     try {
@@ -59,9 +60,12 @@ export const useAuthStore = create((set, get) => ({
       const res = await axiosInstance.post("/auth/login", data);
       
       console.log("✅ Login successful");
+      console.log("🍪 Cookies after login:", document.cookie);
+      
       set({ authUser: res.data });
       toast.success("Logged in successfully");
       get().connectSocket();
+      
     } catch (error) {
       const errorMessage = error.response?.data?.error || "Login failed";
       console.error("❌ Login error:", errorMessage);
@@ -79,12 +83,18 @@ export const useAuthStore = create((set, get) => ({
       set({ authUser: null });
       toast.success("Logged out successfully");
       get().disconnectSocket();
+      
+      // Clear any stored data
+      localStorage.removeItem('auth-storage');
+      
     } catch (error) {
       console.error("❌ Logout error:", error);
-      toast.error("Logout failed");
+      // Force logout even if API call fails
+      set({ authUser: null });
+      get().disconnectSocket();
+      localStorage.removeItem('auth-storage');
     }
   },
-
   updateProfile: async (data) => {
     set({ isUpdatingProfile: true });
     try {
