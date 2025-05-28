@@ -1,120 +1,74 @@
-import { generateToken } from "../lib/utils.js";
 import User from "../models/user.model.js";
-import bcrypt from "bcryptjs";
+import Message from "../models/message.model.js";
+
 import cloudinary from "../lib/cloudinary.js";
+import { getReceiverSocketId, io } from "../lib/socket.js";
 
-export const signup = async (req, res) => {
-  const { fullName, email, password } = req.body;
+export const getUsersForSidebar = async (req, res) => {
   try {
-    if (!fullName || !email || !password) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
+    const loggedInUserId = req.user._id;
+    const filteredUsers = await User.find({ _id: { $ne: loggedInUserId } }).select("-password");
 
-    if (password.length < 6) {
-      return res.status(400).json({ message: "Password must be at least 6 characters" });
-    }
+    res.status(200).json(filteredUsers);
+  } catch (error) {
+    console.error("Error in getUsersForSidebar: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
 
-    const user = await User.findOne({ email });
+export const getMessages = async (req, res) => {
+  try {
+    const { id: userToChatId } = req.params;
+    const myId = req.user._id;
 
-    if (user) return res.status(400).json({ message: "Email already exists" });
-
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    const newUser = new User({
-      fullName,
-      email,
-      password: hashedPassword,
+    const messages = await Message.find({
+      $or: [
+        { senderId: myId, receiverId: userToChatId },
+        { senderId: userToChatId, receiverId: myId },
+      ],
     });
 
-    if (newUser) {
-      // Save user first, then generate token
-      await newUser.save();
-      
-      // Generate JWT token here
-      generateToken(newUser._id, res);
-
-      res.status(201).json({
-        _id: newUser._id,
-        fullName: newUser.fullName,
-        email: newUser.email,
-        profilePic: newUser.profilePic,
-      });
-    } else {
-      res.status(400).json({ message: "Invalid user data" });
-    }
+    res.status(200).json(messages);
   } catch (error) {
-    console.log("Error in signup controller", error.message);
-    res.status(500).json({ message: "Internal Server Error" });
+    console.log("Error in getMessages controller: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const login = async (req, res) => {
-  const { email, password } = req.body;
+export const sendMessage = async (req, res) => {
   try {
-    const user = await User.findOne({ email });
+    const { text, image } = req.body;
+    const { id: receiverId } = req.params;
+    const senderId = req.user._id;
 
-    if (!user) {
-      return res.status(400).json({ message: "Invalid credentials" });
+    let imageUrl;
+    if (image) {
+      // Upload base64 image to cloudinary
+      const uploadResponse = await cloudinary.uploader.upload(image);
+      imageUrl = uploadResponse.secure_url;
     }
 
-    const isPasswordCorrect = await bcrypt.compare(password, user.password);
-    if (!isPasswordCorrect) {
-      return res.status(400).json({ message: "Invalid credentials" });
-    }
-
-    generateToken(user._id, res);
-
-    res.status(200).json({
-      _id: user._id,
-      fullName: user.fullName,
-      email: user.email,
-      profilePic: user.profilePic,
+    const newMessage = new Message({
+      senderId,
+      receiverId,
+      text,
+      image: imageUrl,
     });
-  } catch (error) {
-    console.log("Error in login controller", error.message);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
-};
 
-export const logout = (req, res) => {
-  try {
-    res.cookie("jwt", "", { maxAge: 0 });
-    res.status(200).json({ message: "Logged out successfully" });
-  } catch (error) {
-    console.log("Error in logout controller", error.message);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
-};
+    await newMessage.save();
 
-export const updateProfile = async (req, res) => {
-  try {
-    const { profilePic } = req.body;
-    const userId = req.user._id;
-
-    if (!profilePic) {
-      return res.status(400).json({ message: "Profile pic is required" });
+    const receiverSocketId = getReceiverSocketId(receiverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("newMessage", newMessage);
     }
 
-    const uploadResponse = await cloudinary.uploader.upload(profilePic);
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      { profilePic: uploadResponse.secure_url },
-      { new: true }
-    );
-
-    res.status(200).json(updatedUser);
+    res.status(201).json(newMessage);
   } catch (error) {
-    console.log("error in update profile:", error);
-    res.status(500).json({ message: "Internal server error" });
+    console.log("Error in sendMessage controller: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
-export const checkAuth = (req, res) => {
-  try {
-    res.status(200).json(req.user);
-  } catch (error) {
-    console.log("Error in checkAuth controller", error.message);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
+export const getUserForSidebar = () => {
+  // function implementation
 };
