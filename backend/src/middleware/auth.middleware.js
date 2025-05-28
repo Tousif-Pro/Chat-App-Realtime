@@ -1,30 +1,36 @@
-// middleware/auth.middleware.js
+// middleware/auth.middleware.js - Enhanced with debugging
 import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
 
 export const protectRoute = async (req, res, next) => {
   try {
-    console.log("🔐 Auth middleware triggered");
-    console.log("🍪 Cookies received:", req.cookies);
-    console.log("📋 Authorization header:", req.headers.authorization);
+    console.log("🔐 Auth middleware triggered for:", req.method, req.url);
+    console.log("🌐 Origin:", req.headers.origin);
+    console.log("🍪 All cookies:", JSON.stringify(req.cookies, null, 2));
+    console.log("📋 All headers:", JSON.stringify(req.headers, null, 2));
 
-    // Try to get token from cookies first, then from Authorization header
+    // Try to get token from cookies first
     let token = req.cookies.jwt;
+    console.log("🎫 JWT cookie found:", token ? "Yes" : "No");
     
+    // Fallback to Authorization header
     if (!token && req.headers.authorization) {
       const authHeader = req.headers.authorization;
       if (authHeader.startsWith('Bearer ')) {
         token = authHeader.substring(7);
+        console.log("🎫 Bearer token found in header");
       }
     }
 
-    console.log("🎫 Token found:", token ? "Yes" : "No");
-
     if (!token) {
-      console.log("❌ No token provided");
+      console.log("❌ No token found in cookies or headers");
       return res.status(401).json({ 
         error: "Unauthorized - No token provided",
-        message: "Please login to access this resource" 
+        message: "Please login to access this resource",
+        debug: {
+          cookiesReceived: Object.keys(req.cookies),
+          hasAuthHeader: !!req.headers.authorization
+        }
       });
     }
 
@@ -56,7 +62,8 @@ export const protectRoute = async (req, res, next) => {
       }
       
       return res.status(401).json({ 
-        error: "Unauthorized - Invalid token" 
+        error: "Unauthorized - Invalid token",
+        jwtError: jwtError.message
       });
     }
 
